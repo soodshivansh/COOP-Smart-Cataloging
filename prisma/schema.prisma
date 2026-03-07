@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                   String        @id @default(uuid())
+  email                String        @unique
+  passwordHash         String
+  role                 String        @default("viewer") // admin, manager, viewer
+  createdAt            DateTime      @default(now())
+  lastLogin            DateTime?
+  
+  products             Product[]
+  productVersions      ProductVersion[]
+  auditLogs            AuditLog[]
+  
+  @@index([email])
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  parentId  String?
+  parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  level     Int       @default(0)
+  createdAt DateTime  @default(now())
+  
+  products  Product[]
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  imageUrl    String
+  description String
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdBy   String
+  creator     User        @relation(fields: [createdBy], references: [id])
+  version     Int         @default(1)
+  archived    Boolean     @default(false)
+  
+  tags        ProductTag[]
+  attributes  ProductAttribute[]
+  versions    ProductVersion[]
+  
+  @@index([categoryId])
+  @@index([createdAt(sort: Desc)])
+  @@index([archived])
+}
+
+model ProductTag {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag        String
+  confidence Float
+  source     String   // ai, user, bulk
+  createdAt  DateTime @default(now())
+  
+  @@index([tag])
+  @@index([productId])
+}
+
+model ProductAttribute {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String
+  value      String
+  confidence Float
+  source     String   // image, text, user
+  createdAt  DateTime @default(now())
+  
+  @@index([name, value])
+  @@index([productId])
+}
+
+model ProductVersion {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  version    Int
+  changes    String
+  modifiedBy String
+  modifier   User     @relation(fields: [modifiedBy], references: [id])
+  modifiedAt DateTime @default(now())
+  
+  @@index([productId, version])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  action       String   // create, update, delete, export, login, logout
+  resourceType String   // product, user, category, config
+  resourceId   String
+  metadata     String
+  timestamp    DateTime @default(now())
+  
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([resourceType, resourceId])
+}
+
+model AICache {
+  id        String   @id @default(uuid())
+  cacheKey  String   @unique
+  result    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  
+  @@index([expiresAt])
+}
