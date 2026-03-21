@@ -19,140 +19,119 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const result = await signIn('credentials', {
-        email,
-        password,
+        email, password,
         totpCode: step === 'totp' ? totpCode : '',
         redirect: false,
       });
-
       if (result?.error) {
-        if (result.error === 'CredentialsSignin' && step === 'credentials') {
-          // Could be pending 2FA — try fetching session to check
+        if (step === 'credentials') {
           const res = await fetch('/api/auth/session');
           const session = await res.json();
-          if (session?.user?.pendingTwoFactor) {
-            setStep('totp');
-            setLoading(false);
-            return;
-          }
+          if (session?.user?.pendingTwoFactor) { setStep('totp'); setLoading(false); return; }
         }
         setError(step === 'totp' ? 'Invalid 2FA code' : 'Invalid email or password');
       } else {
-        // Check if 2FA pending
         const res = await fetch('/api/auth/session');
         const session = await res.json();
-        if (session?.user?.pendingTwoFactor) {
-          setStep('totp');
-          setLoading(false);
-          return;
-        }
-        const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-        router.push(callbackUrl);
+        if (session?.user?.pendingTwoFactor) { setStep('totp'); setLoading(false); return; }
+        router.push(searchParams.get('callbackUrl') || '/dashboard');
       }
-    } catch {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('An error occurred.'); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">Smart AI Cataloging</h1>
-          <p className="mt-2 text-text-secondary">
-            {step === 'totp' ? 'Enter your 2FA code' : 'Sign in to your account'}
-          </p>
+    <div className="relative min-h-screen flex flex-col items-center justify-center">
+      {/* Background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1600')" }}
+      />
+      <div className="absolute inset-0 bg-slate-950/70" />
+
+      {/* Logo + branding top center */}
+      <div className="relative z-10 flex flex-col items-center mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          {/* Logo mark */}
+          <div className="w-14 h-14 rounded-2xl bg-cyan-400 flex items-center justify-center shadow-lg">
+            <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
+              <rect x="4" y="4" width="14" height="14" rx="3" fill="#0f172a"/>
+              <rect x="22" y="4" width="14" height="14" rx="3" fill="#0f172a"/>
+              <rect x="4" y="22" width="14" height="14" rx="3" fill="#0f172a"/>
+              <circle cx="29" cy="29" r="7" fill="#0f172a"/>
+              <circle cx="29" cy="29" r="3.5" fill="#22d3ee"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-white font-black text-xl tracking-wide leading-none">Smart</p>
+            <p className="text-cyan-400 font-black text-xl tracking-wide leading-none">Cataloging</p>
+          </div>
         </div>
+        <p className="text-white/60 text-sm tracking-widest uppercase">AI-Powered Inventory</p>
+      </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && (
-            <div className="rounded-lg bg-red-500/10 border border-red-500 p-3 text-sm text-red-500">
-              {error}
-            </div>
-          )}
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-sm bg-cyan-400 rounded-2xl p-8 shadow-2xl">
+        <h1 className="text-2xl font-black text-slate-900 text-center uppercase leading-tight mb-6">
+          {step === 'totp' ? 'Enter 2FA Code' : 'Login To Your Account'}
+        </h1>
 
+        {error && (
+          <div className="mb-4 p-2 bg-red-100 border border-red-400 rounded text-red-700 text-xs text-center">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           {step === 'credentials' ? (
-            <div className="space-y-4">
+            <>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-slate-800 text-sm font-medium mb-1">Email Address :</label>
                 <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
+                  type="email" required value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 bg-background-secondary border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                  placeholder="you@example.com"
+                  className="w-full px-4 py-2.5 rounded-full bg-white text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2">Password</label>
+                <label className="block text-slate-800 text-sm font-medium mb-1">Password :</label>
                 <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
+                  type="password" required value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 bg-background-secondary border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                  placeholder="••••••••"
+                  className="w-full px-4 py-2.5 rounded-full bg-white text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
                 />
               </div>
-            </div>
+            </>
           ) : (
             <div>
-              <label htmlFor="totp" className="block text-sm font-medium mb-2">
-                Authenticator Code
-              </label>
+              <label className="block text-slate-800 text-sm font-medium mb-1">Authenticator Code :</label>
               <input
-                id="totp"
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                required
-                autoFocus
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                className="w-full px-4 py-2 bg-background-secondary border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary text-center text-2xl tracking-widest"
+                type="text" inputMode="numeric" maxLength={6} required autoFocus
+                value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full px-4 py-2.5 rounded-full bg-white text-slate-800 text-center tracking-widest text-xl focus:outline-none focus:ring-2 focus:ring-slate-400"
                 placeholder="000000"
               />
-              <p className="mt-2 text-sm text-text-secondary text-center">
-                Open your authenticator app and enter the 6-digit code
-              </p>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-4 bg-accent-primary hover:bg-accent-primaryHover disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-          >
-            {loading ? 'Please wait...' : step === 'totp' ? 'Verify' : 'Sign in'}
-          </button>
-
-          {step === 'totp' && (
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-slate-800 text-xs">
+              {step === 'credentials' ? (
+                <>Don&apos;t have an account?{' '}<Link href="/register" className="font-bold hover:underline">Sign Up</Link></>
+              ) : (
+                <button type="button" onClick={() => { setStep('credentials'); setError(''); }} className="font-bold hover:underline">← Back</button>
+              )}
+            </div>
             <button
-              type="button"
-              onClick={() => { setStep('credentials'); setTotpCode(''); setError(''); }}
-              className="w-full py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              type="submit" disabled={loading}
+              className="px-6 py-2.5 bg-white text-slate-900 font-black text-sm rounded-full hover:bg-slate-100 disabled:opacity-50 transition-colors uppercase tracking-wide"
             >
-              Back to login
+              {loading ? '...' : step === 'totp' ? 'Verify' : 'Login'}
             </button>
-          )}
+          </div>
         </form>
-
-        {step === 'credentials' && (
-          <p className="text-center text-sm text-text-secondary">
-            Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-accent-primary hover:underline">
-              Register
-            </Link>
-          </p>
-        )}
       </div>
     </div>
   );
