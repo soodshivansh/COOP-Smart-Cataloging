@@ -1,124 +1,121 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id                   String        @id @default(uuid())
-  email                String        @unique
-  passwordHash         String
-  role                 String        @default("viewer") // admin, manager, viewer
-  createdAt            DateTime      @default(now())
-  lastLogin            DateTime?
-  
-  products             Product[]
-  productVersions      ProductVersion[]
-  auditLogs            AuditLog[]
-  
-  @@index([email])
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  email            String           @unique
+  passwordHash     String
+  role             String           @default("viewer") // admin, viewer
+  twoFactorSecret  String?
+  twoFactorEnabled Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  lastLogin        DateTime?
+
+  products        Product[]
+  productVersions ProductVersion[]
+  auditLogs       AuditLog[]
 }
 
 model Category {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  parentId  String?
-  parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  name      String     @unique
+  parentId  String?    @db.ObjectId
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children  Category[] @relation("CategoryHierarchy")
-  level     Int       @default(0)
-  createdAt DateTime  @default(now())
-  
+  level     Int        @default(0)
+  createdAt DateTime   @default(now())
+
   products  Product[]
 }
 
 model Product {
-  id          String      @id @default(uuid())
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
   imageUrl    String
   description String
-  categoryId  String
-  category    Category    @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  createdBy   String
-  creator     User        @relation(fields: [createdBy], references: [id])
-  version     Int         @default(1)
-  archived    Boolean     @default(false)
-  
+  categoryId  String             @db.ObjectId
+  category    Category           @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdBy   String             @db.ObjectId
+  creator     User               @relation(fields: [createdBy], references: [id])
+  version     Int                @default(1)
+  archived    Boolean            @default(false)
+
   tags        ProductTag[]
   attributes  ProductAttribute[]
   versions    ProductVersion[]
-  
+
   @@index([categoryId])
   @@index([createdAt(sort: Desc)])
   @@index([archived])
 }
 
 model ProductTag {
-  id         String   @id @default(uuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  tag        String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tag       String
   confidence Float
-  source     String   // ai, user, bulk
-  createdAt  DateTime @default(now())
-  
+  source    String   // ai, user, bulk
+  createdAt DateTime @default(now())
+
   @@index([tag])
   @@index([productId])
 }
 
 model ProductAttribute {
-  id         String   @id @default(uuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String   @db.ObjectId
+  product    Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   name       String
   value      String
   confidence Float
   source     String   // image, text, user
   createdAt  DateTime @default(now())
-  
+
   @@index([name, value])
   @@index([productId])
 }
 
 model ProductVersion {
-  id         String   @id @default(uuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String   @db.ObjectId
+  product    Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   version    Int
   changes    String
-  modifiedBy String
+  modifiedBy String   @db.ObjectId
   modifier   User     @relation(fields: [modifiedBy], references: [id])
   modifiedAt DateTime @default(now())
-  
+
   @@index([productId, version])
 }
 
 model AuditLog {
-  id           String   @id @default(uuid())
-  userId       String
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
   user         User     @relation(fields: [userId], references: [id])
   action       String   // create, update, delete, export, login, logout
   resourceType String   // product, user, category, config
   resourceId   String
   metadata     String
   timestamp    DateTime @default(now())
-  
+
   @@index([userId, timestamp(sort: Desc)])
   @@index([resourceType, resourceId])
 }
 
 model AICache {
-  id        String   @id @default(uuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   cacheKey  String   @unique
   result    String
   createdAt DateTime @default(now())
   expiresAt DateTime
-  
+
   @@index([expiresAt])
 }

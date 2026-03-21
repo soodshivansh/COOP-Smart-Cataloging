@@ -3,18 +3,21 @@ import { NextResponse } from 'next/server';
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-  
-  // Public routes
+
   const publicRoutes = ['/login', '/register'];
-  if (publicRoutes.includes(pathname)) {
+  if (publicRoutes.includes(pathname) || pathname.startsWith('/api/auth')) {
     return NextResponse.next();
   }
 
-  // Require authentication for all other routes
-  if (!req.auth && !pathname.startsWith('/api/auth')) {
+  if (!req.auth) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Block users with pending 2FA from accessing anything except login
+  if ((req.auth as any).user?.pendingTwoFactor) {
+    return NextResponse.redirect(new URL('/login', req.url));
   }
 
   return NextResponse.next();

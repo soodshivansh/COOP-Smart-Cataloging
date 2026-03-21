@@ -6,6 +6,8 @@ declare module 'next-auth' {
       id: string;
       email: string;
       role: string;
+      twoFactorEnabled: boolean;
+      pendingTwoFactor?: boolean;
     };
   }
 
@@ -13,6 +15,8 @@ declare module 'next-auth' {
     id: string;
     email: string;
     role: string;
+    twoFactorEnabled: boolean;
+    pendingTwoFactor?: boolean;
   }
 }
 
@@ -20,5 +24,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: string;
+    twoFactorEnabled: boolean;
+    pendingTwoFactor?: boolean;
   }
 }

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const authResult = await requireAuth(req, 'manager');
+  const authResult = await requireAuth(req, 'admin');
   if (authResult instanceof NextResponse) return authResult;
 
   try {

@@ -2,7 +2,8 @@
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'manager' | 'viewer';
+  role: 'admin' | 'viewer';
+  twoFactorEnabled: boolean;
   createdAt: Date;
   lastLogin: Date | null;
 }
