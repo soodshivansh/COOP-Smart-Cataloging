@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import type { Product } from '@/types';
 
@@ -10,6 +11,9 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ products, onRefresh }: ProductGridProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === 'admin';
+
   if (products.length === 0) {
     return (
       <div className="text-center py-12">
@@ -22,13 +26,13 @@ export default function ProductGrid({ products, onRefresh }: ProductGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} onUpdate={onRefresh} />
+        <ProductCard key={product.id} product={product} onUpdate={onRefresh} isAdmin={isAdmin} />
       ))}
     </div>
   );
 }
 
-function ProductCard({ product, onUpdate }: { product: Product; onUpdate: () => void }) {
+function ProductCard({ product, onUpdate, isAdmin }: { product: Product; onUpdate: () => void; isAdmin: boolean }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -69,7 +73,7 @@ function ProductCard({ product, onUpdate }: { product: Product; onUpdate: () => 
           </div>
         )}
 
-        {isHovered && (
+        {isHovered && isAdmin && (
           <div className="mt-4 flex gap-2">
             <button className="flex-1 px-3 py-1.5 bg-accent-primary hover:bg-accent-primaryHover rounded text-sm transition-colors">
               Edit

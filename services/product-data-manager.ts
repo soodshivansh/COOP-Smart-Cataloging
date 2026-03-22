@@ -10,19 +10,31 @@ export class ProductDataManager {
     data: {
       imageUrl: string;
       description: string;
-      categoryId: string;
+      categoryId: string; // can be a name string or a valid ObjectId
       tags: Array<{ tag: string; confidence: number; source: string }>;
       attributes: Array<{ name: string; value: string; confidence: number; source: string }>;
     },
     userId: string
   ): Promise<Product> {
     return prisma.$transaction(async (tx) => {
+      // Resolve categoryId: if it's not a 24-char hex ObjectId, treat it as a name and upsert
+      let resolvedCategoryId = data.categoryId;
+      if (!/^[a-f\d]{24}$/i.test(data.categoryId)) {
+        const categoryName = data.categoryId.trim() || 'Uncategorized';
+        const category = await tx.category.upsert({
+          where: { name: categoryName },
+          update: {},
+          create: { name: categoryName, level: 0 },
+        });
+        resolvedCategoryId = category.id;
+      }
+
       // Create product
       const product = await tx.product.create({
         data: {
           imageUrl: data.imageUrl,
           description: data.description,
-          categoryId: data.categoryId,
+          categoryId: resolvedCategoryId,
           createdBy: userId,
           version: 1,
         },
@@ -56,7 +68,7 @@ export class ProductDataManager {
       // Create audit log
       await createAuditLog(userId, 'create', 'product', product.id, {
         imageUrl: data.imageUrl,
-        categoryId: data.categoryId,
+        categoryId: resolvedCategoryId,
       });
 
       return product as Product;
