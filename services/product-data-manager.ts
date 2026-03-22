@@ -84,7 +84,6 @@ export class ProductDataManager {
     userId: string
   ): Promise<Product> {
     return prisma.$transaction(async (tx) => {
-      // Get current product for version history
       const currentProduct = await tx.product.findUnique({
         where: { id },
         include: { tags: true, attributes: true },
@@ -94,11 +93,13 @@ export class ProductDataManager {
         throw new Error('Product not found');
       }
 
-      // Update product
+      // Only pass scalar fields to Prisma — strip relations and id
+      const { category, tags, attributes, id: _id, createdBy, createdAt, ...scalarUpdates } = updates as any;
+
       const product = await tx.product.update({
         where: { id },
         data: {
-          ...updates,
+          ...scalarUpdates,
           version: currentProduct.version + 1,
           updatedAt: new Date(),
         },
@@ -114,7 +115,7 @@ export class ProductDataManager {
         data: {
           productId: id,
           version: product.version,
-          changes: this.calculateChanges(currentProduct, updates),
+          changes: JSON.stringify(this.calculateChanges(currentProduct, updates)),
           modifiedBy: userId,
         },
       });
