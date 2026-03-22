@@ -17,7 +17,7 @@ export async function createAuditLog(
         action,
         resourceType,
         resourceId,
-        metadata,
+        metadata: JSON.stringify(metadata),
         timestamp: new Date(),
       },
     });
