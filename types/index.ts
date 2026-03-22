@@ -56,8 +56,18 @@ export interface AnalysisResult {
   categories: CategorySuggestion[];
   tags: TagSuggestion[];
   attributes: AttributeSuggestion[];
+  title?: string;
   processingTime: number;
   cached?: boolean;
+}
+
+export interface HealthScore {
+  score: number; // 0-100
+  total: number;
+  missingTitle: number;
+  missingTags: number;
+  missingAttributes: number;
+  archived: number;
 }
 
 export interface CategorySuggestion {

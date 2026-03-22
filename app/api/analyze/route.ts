@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         categories: result.categories,
         tags: result.tags,
         attributes: result.attributes,
+        title: result.title || '',
       },
       processingTime: result.processingTime,
       cached: result.cached || false,

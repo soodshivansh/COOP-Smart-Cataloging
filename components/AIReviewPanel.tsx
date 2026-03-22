@@ -9,6 +9,7 @@ interface AIReviewPanelProps {
 }
 
 export default function AIReviewPanel({ analysis, onConfirm }: AIReviewPanelProps) {
+  const [title, setTitle] = useState(analysis.title || '');
   const [selectedCategory, setSelectedCategory] = useState(
     analysis.categories[0]?.name || ''
   );
@@ -24,7 +25,8 @@ export default function AIReviewPanel({ analysis, onConfirm }: AIReviewPanelProp
 
   const handleConfirm = () => {
     onConfirm({
-      categoryId: selectedCategory, // In real app, would map to category ID
+      title,
+      categoryId: selectedCategory,
       tags: selectedTags.map(tag => ({
         tag,
         confidence: 0.8,
@@ -47,6 +49,18 @@ export default function AIReviewPanel({ analysis, onConfirm }: AIReviewPanelProp
       </p>
 
       <div className="space-y-6">
+        {/* AI Generated Title */}
+        <div>
+          <h3 className="font-medium mb-3">Product Title</h3>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="AI-generated title..."
+            className="w-full px-3 py-2 bg-background-tertiary border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          />
+        </div>
+
         {/* Categories */}
         <div>
           <h3 className="font-medium mb-3">Category</h3>

@@ -35,6 +35,7 @@ export class AIEngineService {
       categories: imageAnalysis.categories,
       tags: [...imageAnalysis.tags, ...textAnalysis.tags],
       attributes: [...imageAnalysis.attributes, ...textAnalysis.attributes],
+      title: imageAnalysis.title,
       processingTime: Date.now() - startTime,
       cached: false,
     };
@@ -47,6 +48,7 @@ export class AIEngineService {
     categories: CategorySuggestion[];
     tags: TagSuggestion[];
     attributes: AttributeSuggestion[];
+    title: string;
   }> {
     try {
       const imageBase64 = typeof image === 'string'
@@ -62,11 +64,12 @@ export class AIEngineService {
               {
                 type: 'text',
                 text: `Analyze this product image and provide:
-1. Primary category (e.g., Electronics, Clothing, Furniture)
-2. Up to 5 relevant tags
-3. Only include attributes you can clearly determine from the image. Skip any attribute you are not sure about — do not use "Unknown".
+1. A short product title (3-6 words, e.g. "Blue Wireless Noise-Cancelling Headphones")
+2. Primary category (e.g., Electronics, Clothing, Furniture)
+3. Up to 5 relevant tags
+4. Only include attributes you can clearly determine from the image. Skip any attribute you are not sure about — do not use "Unknown".
 
-Return ONLY valid JSON, no markdown: { "category": "...", "tags": ["..."], "attributes": { "color": "...", "material": "...", "shape": "..." } }`,
+Return ONLY valid JSON, no markdown: { "title": "...", "category": "...", "tags": ["..."], "attributes": { "color": "...", "material": "..." } }`,
               },
               {
                 type: 'image_url',
@@ -83,6 +86,7 @@ Return ONLY valid JSON, no markdown: { "category": "...", "tags": ["..."], "attr
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
 
       return {
+        title: parsed.title || '',
         categories: [{ name: parsed.category || 'Uncategorized', confidence: 0.85, isPrimary: true }],
         tags: (parsed.tags || []).map((tag: string) => ({ name: tag, confidence: 0.8 })),
         attributes: Object.entries(parsed.attributes || {})
@@ -175,5 +179,59 @@ Return ONLY valid JSON, no markdown: { "tags": ["..."], "attributes": { "brand":
       }
     }
     throw lastError!;
+  }
+
+  static async improveDescription(description: string): Promise<string> {
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'user',
+          content: `Rewrite this product description to be more professional, clear, and appealing for an e-commerce catalogue. Keep it concise (2-3 sentences max). Do not add made-up specs.
+
+Original: "${description}"
+
+Return ONLY the improved description text, no quotes, no explanation.`,
+        },
+      ],
+      max_tokens: 200,
+    });
+    return response.choices[0]?.message?.content?.trim() || description;
+  }
+
+  static async parseNaturalLanguageQuery(query: string): Promise<{
+    keywords: string;
+    categories: string[];
+    attributes: Record<string, string>;
+  }> {
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'user',
+          content: `Parse this product search query into structured filters.
+
+Query: "${query}"
+
+Extract:
+- keywords: the core search terms (remove filter words)
+- categories: any product categories mentioned (e.g. Electronics, Clothing)
+- attributes: key-value pairs like color, material, brand, size
+
+Return ONLY valid JSON, no markdown: { "keywords": "...", "categories": ["..."], "attributes": { "color": "...", "brand": "..." } }`,
+        },
+      ],
+      max_tokens: 200,
+    });
+
+    const text = response.choices[0]?.message?.content || '{}';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+
+    return {
+      keywords: parsed.keywords || query,
+      categories: parsed.categories || [],
+      attributes: parsed.attributes || {},
+    };
   }
 }
